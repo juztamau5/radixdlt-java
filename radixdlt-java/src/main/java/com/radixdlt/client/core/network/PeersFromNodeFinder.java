@@ -4,11 +4,6 @@ import io.reactivex.Observable;
 import io.reactivex.Single;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.ResponseBody;
 
 public class PeersFromNodeFinder implements PeerDiscovery {
 	private final String nodeFinderUrl;
@@ -20,22 +15,22 @@ public class PeersFromNodeFinder implements PeerDiscovery {
 	}
 
 	public Observable<RadixPeer> findPeers() {
-		Request request = new Request.Builder()
+		HttpRequest request = new HttpRequest.Builder()
 			.url(this.nodeFinderUrl)
 			.build();
 
 		return Single.<String>create(emitter -> {
-				Call call = HttpClients.getSslAllTrustingClient().newCall(request);
+				HttpCall call = HttpClients.getSslAllTrustingClient().newCall(request);
 				emitter.setCancellable(call::cancel);
-				call.enqueue(new Callback() {
+				call.enqueue(new HttpCallback() {
 					@Override
-					public void onFailure(Call call, IOException e) {
+					public void onFailure(HttpCall call, IOException e) {
 						emitter.tryOnError(e);
 					}
 
 					@Override
-					public void onResponse(Call call, Response response) throws IOException {
-						ResponseBody body = response.body();
+					public void onResponse(HttpCall call, HttpResponse response) throws IOException {
+						HttpResponseBody body = response.body();
 						if (response.isSuccessful() && body != null) {
 							String bodyString = body.string();
 							body.close();

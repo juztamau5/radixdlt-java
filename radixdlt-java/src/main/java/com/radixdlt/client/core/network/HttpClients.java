@@ -11,7 +11,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import okhttp3.OkHttpClient;
 
 public class HttpClients {
 	private HttpClients() {
@@ -23,11 +22,11 @@ public class HttpClients {
 	private static final Object LOCK = new Object();
 
 	/**
-	 * Single OkHttpClient to be used for all connections
+	 * Single RadixHttpClient to be used for all connections
 	 */
-	private static OkHttpClient sslAllTrustingClient;
+	private static RadixHttpClient sslAllTrustingClient;
 
-	private static OkHttpClient createClient(BiFunction<X509Certificate[], String, Single<Boolean>> trustManager) {
+	private static RadixHttpClient createClient(BiFunction<X509Certificate[], String, Single<Boolean>> trustManager) {
 		// TODO: Pass trust issue to user
 		// Create a trust manager that does not validate certificate chains
 		final TrustManager[] trustAllCerts = new TrustManager[] {
@@ -60,7 +59,7 @@ public class HttpClients {
 			// Create an ssl socket factory with our all-trusting manager
 			final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
-			OkHttpClient.Builder builder = new OkHttpClient.Builder();
+			RadixHttpClient.Builder builder = new RadixHttpClient.Builder();
 			builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
 			builder.hostnameVerifier((hostname, session) -> hostname.equals(session.getPeerHost()));
 
@@ -76,10 +75,10 @@ public class HttpClients {
 	}
 
 	/**
-	 * Builds OkHttpClient to be used for secure connections with self signed
+	 * Builds RadixHttpClient to be used for secure connections with self signed
 	 * certificates.
 	 */
-	public static OkHttpClient getSslAllTrustingClient() {
+	public static RadixHttpClient getSslAllTrustingClient() {
 		synchronized (LOCK) {
 			if (sslAllTrustingClient == null) {
 				sslAllTrustingClient = createClient(((x509Certificates, s) -> Single.just(true)));

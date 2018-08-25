@@ -1,5 +1,7 @@
 package com.radixdlt.client.core.network;
 
+import com.radixdlt.client.core.util.ByteString;
+
 import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
@@ -8,11 +10,6 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,13 +24,13 @@ public class WebSocketClient {
 	private final BehaviorSubject<RadixClientStatus> status = BehaviorSubject.createDefault(RadixClientStatus.CLOSED);
 	private final AtomicBoolean closed = new AtomicBoolean(false);
 
-	private final Request endpoint;
-	private final Supplier<OkHttpClient> okHttpClient;
+	private final HttpRequest endpoint;
+	private final Supplier<RadixHttpClient> httpClient;
 
-	private PublishSubject<String> messages = PublishSubject.create();
+	private PublishSubject<byte[]> messages = PublishSubject.create();
 
-	public WebSocketClient(Supplier<OkHttpClient> okHttpClient, Request endpoint) {
-		this.okHttpClient = okHttpClient;
+	public WebSocketClient(Supplier<RadixHttpClient> httpClient, HttpRequest endpoint) {
+		this.httpClient = httpClient;
 		this.endpoint = endpoint;
 
 		this.status
@@ -45,11 +42,11 @@ public class WebSocketClient {
 			});
 	}
 
-	public Observable<String> getMessages() {
+	public Observable<byte[]> getMessages() {
 		return messages;
 	}
 
-	public Request getEndpoint() {
+	public HttpRequest getEndpoint() {
 		return endpoint;
 	}
 
@@ -78,14 +75,14 @@ public class WebSocketClient {
 		this.status.onNext(RadixClientStatus.CONNECTING);
 
 		// HACKISH: fix
-		this.webSocket = this.okHttpClient.get().newWebSocket(endpoint, new WebSocketListener() {
+		this.webSocket = this.httpClient.get().newWebSocket(endpoint, new WebSocketListener() {
 			@Override
-			public void onOpen(WebSocket webSocket, Response response) {
+			public void onOpen(WebSocket webSocket, HttpResponse response) {
 				WebSocketClient.this.status.onNext(RadixClientStatus.OPEN);
 			}
 
 			@Override
-			public void onMessage(WebSocket webSocket, String message) {
+			public void onMessage(WebSocket webSocket, byte[] message) {
 				messages.onNext(message);
 			}
 
@@ -100,7 +97,7 @@ public class WebSocketClient {
 			}
 
 			@Override
-			public void onFailure(WebSocket websocket, Throwable t, Response response) {
+			public void onFailure(WebSocket websocket, Throwable t, HttpResponse response) {
 				if (closed.get()) {
 					return;
 				}

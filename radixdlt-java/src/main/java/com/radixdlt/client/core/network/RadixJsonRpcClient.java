@@ -42,7 +42,7 @@ public class RadixJsonRpcClient {
 
 		final JsonParser parser = new JsonParser();
 		this.messages = this.wsClient.getMessages()
-			.map(msg -> parser.parse(msg).getAsJsonObject())
+			.map(msg -> parser.parse(new String(msg)).getAsJsonObject())
 			.publish()
 			.refCount();
 	}
