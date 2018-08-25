@@ -12,6 +12,7 @@ import com.radixdlt.client.application.identity.model.keystore.Crypto;
 import com.radixdlt.client.application.identity.model.keystore.Keystore;
 import com.radixdlt.client.application.identity.model.keystore.Pbkdfparams;
 import com.radixdlt.client.core.util.AndroidUtil;
+import com.radixdlt.client.core.util.ByteString;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -30,7 +31,6 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import okio.ByteString;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 public final class PrivateKeyEncrypter {
@@ -59,7 +59,7 @@ public final class PrivateKeyEncrypter {
 
     public static void createEncryptedPrivateKeyFile(String password, String filePath) throws Exception {
         ECKeyPair ecKeyPair = ECKeyPairGenerator.newInstance().generateKeyPair();
-        String privateKey = ByteString.of(ecKeyPair.getPrivateKey()).hex();
+        String privateKey = ByteString.toHex(ecKeyPair.getPrivateKey());
         byte[] salt = getSalt().getBytes(StandardCharsets.UTF_8);
 
         SecretKey derivedKey = getSecretKey(password, salt, ITERATIONS, KEY_LENGTH);
@@ -69,7 +69,7 @@ public final class PrivateKeyEncrypter {
         byte[] iv = cipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV();
 
         String cipherText = encrypt(cipher, privateKey);
-        byte[] mac = generateMac(derivedKey.getEncoded(), ByteString.decodeHex(cipherText).toByteArray());
+        byte[] mac = generateMac(derivedKey.getEncoded(), ByteString.decodeHex(cipherText));
 
         Keystore keystore = createKeystore(ecKeyPair, cipherText, mac, iv, salt);
 
@@ -84,9 +84,9 @@ public final class PrivateKeyEncrypter {
         byte[] salt = keystore.getCrypto().getPbkdfparams().getSalt().getBytes(StandardCharsets.UTF_8);
         int iterations = keystore.getCrypto().getPbkdfparams().getIterations();
         int keyLen = keystore.getCrypto().getPbkdfparams().getKeylen();
-        byte[] iv = ByteString.decodeHex(keystore.getCrypto().getCipherparams().getIv()).toByteArray();
+        byte[] iv = ByteString.decodeHex(keystore.getCrypto().getCipherparams().getIv());
         String mac = keystore.getCrypto().getMac();
-        byte[] cipherText = ByteString.decodeHex(keystore.getCrypto().getCiphertext()).toByteArray();
+        byte[] cipherText = ByteString.decodeHex(keystore.getCrypto().getCiphertext());
 
         SecretKey derivedKey = getSecretKey(password, salt, iterations, keyLen);
 
@@ -95,13 +95,13 @@ public final class PrivateKeyEncrypter {
 
         byte[] computedMac = generateMac(derivedKey.getEncoded(), cipherText);
 
-        if (!Arrays.equals(computedMac, ByteString.decodeHex(mac).toByteArray())) {
+        if (!Arrays.equals(computedMac, ByteString.decodeHex(mac))) {
             throw new Exception("MAC mismatch");
         }
 
         String privateKey = decrypt(cipher, cipherText);
 
-        return ByteString.decodeHex(privateKey).toByteArray();
+        return ByteString.decodeHex(privateKey);
     }
 
     private static SecretKey getSecretKey(String passPhrase, byte[] salt, int iterations, int keyLength)
@@ -133,7 +133,7 @@ public final class PrivateKeyEncrypter {
         Crypto crypto = new Crypto();
         crypto.setCipher(ALGORITHM);
         crypto.setCiphertext(cipherText);
-        crypto.setMac(ByteString.of(mac).hex());
+        crypto.setMac(ByteString.toHex(mac));
 
         Pbkdfparams pbkdfparams = new Pbkdfparams();
         pbkdfparams.setDigest(DIGEST);
@@ -142,7 +142,7 @@ public final class PrivateKeyEncrypter {
         pbkdfparams.setSalt(new String(salt, StandardCharsets.UTF_8));
 
         Cipherparams cipherparams = new Cipherparams();
-        cipherparams.setIv(ByteString.of(iv).hex());
+        cipherparams.setIv(ByteString.toHex(iv));
 
         crypto.setCipherparams(cipherparams);
         crypto.setPbkdfparams(pbkdfparams);
@@ -155,7 +155,7 @@ public final class PrivateKeyEncrypter {
     private static String encrypt(Cipher cipher, String encrypt) throws Exception {
         byte[] bytes = encrypt.getBytes(StandardCharsets.UTF_8);
         byte[] encrypted = cipher.doFinal(bytes);
-        return ByteString.of(encrypted).hex();
+        return ByteString.toHex(encrypted);
     }
 
     private static String decrypt(Cipher cipher, byte[] encrypted) throws Exception {
@@ -173,7 +173,7 @@ public final class PrivateKeyEncrypter {
     private static String getSalt() {
         byte[] salt = new byte[32];
         getSecureRandom().nextBytes(salt);
-        return ByteString.of(salt).hex();
+        return ByteString.toHex(salt);
     }
 
     private static SecureRandom getSecureRandom() {

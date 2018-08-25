@@ -7,6 +7,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.annotations.SerializedName;
 import com.radixdlt.client.core.address.EUID;
 import com.radixdlt.client.core.util.Base64Encoded;
+import com.radixdlt.client.core.util.ByteString;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -24,7 +25,6 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import okio.ByteString;
 import org.bouncycastle.util.encoders.Base64;
 
 public class Dson {
@@ -119,7 +119,7 @@ public class Dson {
 			jsonObject.addProperty("serializer", "HASH");
 			byte[] buffer = new byte[length];
 			byteBuffer.get(buffer);
-			jsonObject.addProperty("value", ByteString.of(buffer).hex());
+			jsonObject.addProperty("value", ByteString.toHex(buffer));
 			result = jsonObject;
 		} else {
 			throw new RuntimeException("Unknown type: " + type);
