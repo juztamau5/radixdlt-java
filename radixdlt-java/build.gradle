@@ -32,6 +32,10 @@ jar {
     }
 
     exclude('universe.key')
+
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 task depsize {
